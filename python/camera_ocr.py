@@ -36,13 +36,13 @@ class LiveCameraOCR:
         self.pose_detector = poseDetector()
         
         self.cap = cv2.VideoCapture(0)
-        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-        self.cap.set(cv2.CAP_PROP_FPS, 30)  # Set FPS for smoother performance
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 480)  # Reduced resolution for better performance
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 360)  # Reduced resolution for better performance
+        self.cap.set(cv2.CAP_PROP_FPS, 20)  # Lower FPS for better processing
         self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)  # Reduce buffer size to minimize lag
         
         self.frame_count = 0
-        self.process_every_n_frames = 8  # Reduced from 15 to 8 for better responsiveness
+        self.process_every_n_frames = 5  # Much more frequent processing for better responsiveness
         self.last_detections = []
         
         # OCR cache to avoid redundant processing
@@ -88,13 +88,22 @@ class LiveCameraOCR:
         area = width * height
         aspect_ratio = max(width/height if height > 0 else 1, height/width if width > 0 else 1)
         
-        # Use cached OCR result if available
+        # Skip OCR for very obvious food items to improve performance
+        obvious_food_classes = ['apple', 'banana', 'orange', 'sandwich', 'pizza', 'donut', 'cake', 'hotdog']
+        if any(food_class in class_name_lower for food_class in obvious_food_classes):
+            return 'food'  # Skip OCR for obvious food items
+        
+        # Use cached OCR result if available, but only when really needed
         cache_key = f"{self.cache_frame_count}_{x1}_{y1}_{x2}_{y2}"
         if cache_key in self.ocr_cache:
             ocr_text = self.ocr_cache[cache_key]
         else:
-            ocr_text = self.extract_text_from_region(frame, (x1, y1, x2, y2))
-            self.ocr_cache[cache_key] = ocr_text
+            # Only do OCR for ambiguous cases
+            if any(keyword in class_name_lower for keyword in ['bottle', 'container', 'package', 'box', 'object', 'cylinder']):
+                ocr_text = self.extract_text_from_region(frame, (x1, y1, x2, y2))
+                self.ocr_cache[cache_key] = ocr_text
+            else:
+                ocr_text = ""
         
         ocr_text_lower = ocr_text.lower() if ocr_text.strip() else ""
         
@@ -126,8 +135,8 @@ class LiveCameraOCR:
         if any(container_word in class_name_lower for container_word in ['box', 'carton', 'tetra']):
             return 'water'  # All boxes/cartons are juice boxes - always water
         
-        # FILTER OUT BACKGROUND OBJECTS - RELAXED SIZE FILTERING FOR NEAR-MOUTH DETECTION
-        if area < 1500:  # Reduced threshold to catch partially occluded objects near mouth
+        # FILTER OUT BACKGROUND OBJECTS - MUCH MORE RELAXED FOR FOOD DETECTION
+        if area < 800:  # Much lower threshold to catch muffins and small food items
             return 'unknown'  # Don't classify very small background objects
         
         # Additional background filtering based on position
@@ -136,16 +145,16 @@ class LiveCameraOCR:
         center_y = (y1 + y2) / 2
         
         # Objects at edges are likely background - but be more lenient for center objects (near mouth)
-        if (center_x < frame_width * 0.1 or center_x > frame_width * 0.9 or
-            center_y < frame_height * 0.1 or center_y > frame_height * 0.9):
-            if area < 8000:  # Reduced threshold for edge objects to catch partially visible items
+        if (center_x < frame_width * 0.05 or center_x > frame_width * 0.95 or
+            center_y < frame_height * 0.05 or center_y > frame_height * 0.95):
+            if area < 5000:  # Much lower threshold for edge objects to catch muffins
                 return 'unknown'
         
         # Special handling for objects in center region (likely near mouth during consuming)
-        elif (frame_width * 0.3 < center_x < frame_width * 0.7 and 
-              frame_height * 0.3 < center_y < frame_height * 0.7):
+        elif (frame_width * 0.2 < center_x < frame_width * 0.8 and 
+              frame_height * 0.2 < center_y < frame_height * 0.8):
             # Objects in center region (near mouth) - be very permissive with small objects
-            if area < 800:  # Much lower threshold for center objects
+            if area < 400:  # Very low threshold for center objects to catch muffins
                 return 'unknown'
         
         # POSE-AWARE CLASSIFICATION: When consuming, prioritize pills, then food, then beverages
@@ -198,7 +207,7 @@ class LiveCameraOCR:
         elif any(keyword in class_name_lower for keyword in ['pill', 'medicine', 'capsule', 'tablet', 'vitamin', 'medication', 'pharmacy', 'prescription', 'drug']):
             return 'pills'  # Only medicine-related items
             
-        # FOOD CATEGORY - COMPREHENSIVE FOOD DETECTION INCLUDING WRAPPED ITEMS
+        # FOOD CATEGORY - COMPREHENSIVE FOOD DETECTION INCLUDING WRAPPED ITEMS AND DEFAULT OBJECTS
         food_keywords = [
             'food', 'sandwich', 'pizza', 'apple', 'banana', 'bread', 'donut', 'cookie', 'chip', 'snack', 'fruit', 'vegetable',
             'muffin', 'cupcake', 'cake', 'bagel', 'pastry', 'croissant', 'danish', 'scone', 'biscuit', 'cracker',
@@ -211,8 +220,15 @@ class LiveCameraOCR:
         ]
         if any(keyword in class_name_lower for keyword in food_keywords):
             return 'food'  # Comprehensive food detection
-        elif class_name_lower in ['bowl', 'plate']:
-            return 'food'  # Food containers
+        elif class_name_lower in ['bowl', 'plate', 'dining table', 'table']:
+            return 'food'  # Food containers and surfaces
+        
+        # DEFAULT CLASSIFICATION FOR UNIDENTIFIED OBJECTS - PRIORITIZE FOOD
+        # If it's not clearly pills or water, assume it could be food (especially for muffins)
+        if not any(keyword in class_name_lower for keyword in ['bottle', 'can', 'cup', 'glass', 'drink', 'beverage']):
+            # Check if it has food-like characteristics (medium size, not elongated)
+            if 1000 < area < 20000 and aspect_ratio < 2.0:
+                return 'food'  # Default medium-sized objects to food (catches muffins)
         
         # STEP 2: Handle generic "bottle" - already handled above
         
@@ -392,17 +408,14 @@ class LiveCameraOCR:
             elif 4000 < area < 12000 and aspect_ratio < 1.3:
                 return 'pills'  # Only properly sized cylindrical objects = pills
             
-            # Everything else defaults to water or food (NOT pills)
+            # Everything else defaults to food (ESPECIALLY for muffins)
             else:
-                if aspect_ratio > 1.2:
-                    return 'water'  # Slightly rectangular = juice box or bottle
-                else:
-                    return 'food'   # Square = food package
+                return 'food'  # Default everything else to food to catch muffins
     
     def detect_objects(self, frame: np.ndarray) -> List[Dict]:
         # Clear OCR cache when processing new frame
         self.cache_frame_count += 1
-        if self.cache_frame_count % 50 == 0:  # Clear cache every 50 frames for better memory usage
+        if self.cache_frame_count % 100 == 0:  # Clear cache less frequently
             self.ocr_cache.clear()
         
         results = self.model(frame, verbose=False)
@@ -417,7 +430,7 @@ class LiveCameraOCR:
                     class_id = int(box.cls[0].cpu().numpy())
                     class_name = self.model.names[class_id]
                     
-                    if confidence > 0.5:  # Optimized threshold for better performance
+                    if confidence > 0.3:  # Lower threshold to catch muffins and other food items
                         bbox = (int(x1), int(y1), int(x2), int(y2))
                         object_type = self.classify_object(class_name, bbox, frame)
                         detections.append({
@@ -440,12 +453,23 @@ class LiveCameraOCR:
         if roi.size == 0 or roi.shape[0] < 15 or roi.shape[1] < 15:
             return ""  # Skip very small regions faster
         
-        # Optimized OCR with single configuration for speed
+        # Skip OCR for very small regions to improve performance
+        if area < 2000:
+            return ""
+        
+        # Ultra-fast OCR with minimal processing
         try:
+            # Resize for faster OCR processing
+            if roi.shape[0] > 100 or roi.shape[1] > 100:
+                scale = min(100/roi.shape[0], 100/roi.shape[1])
+                new_width = int(roi.shape[1] * scale)
+                new_height = int(roi.shape[0] * scale)
+                roi = cv2.resize(roi, (new_width, new_height))
+            
             roi_pil = Image.fromarray(cv2.cvtColor(roi, cv2.COLOR_BGR2RGB))
             
-            # Single fast OCR configuration
-            config = '--psm 6 -c tessedit_char_whitelist=0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz '
+            # Fastest OCR configuration
+            config = '--psm 8'
             
             try:
                 text = pytesseract.image_to_string(roi_pil, config=config).strip()
@@ -716,6 +740,7 @@ def process_pose_detection(self, frame: np.ndarray) -> np.ndarray:
             
             self.frame_count += 1
             
+            # Process object detection less frequently but pose detection every frame
             if self.frame_count % self.process_every_n_frames == 0:
                 self.last_detections = self.detect_objects(frame)
             
