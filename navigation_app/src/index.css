@@ -45,7 +45,41 @@
   border-radius: 50%;
   border: 3px solid #3b82f6;
   background: rgba(59, 130, 246, 0.1);
+  animation: pulse 2s infinite;
+}
 
+@keyframes pulse {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(2);
+    opacity: 0;
+  }
+}
+
+/* Patient location marker styles */
+.patient-location-marker {
+  position: relative;
+  background: transparent;
+  border: none;
+}
+
+.patient-location-marker .pulse {
+  animation: patient-pulse 2s infinite;
+}
+
+@keyframes patient-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+  }
 }
 
 

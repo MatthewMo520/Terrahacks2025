@@ -4,6 +4,7 @@ import WelcomeBanner from '../components/WelcomeBanner'
 import Updates from '../components/Updates'
 import Checklist from '../components/Checklist'
 import MedicalSummary from '../components/MedicalSummary'
+import PatientLocationMap from '../components/PatientLocationMap'
 import { USER_CONFIG } from '../lib/dashboard-config'
 import { Home, AlertCircle, Navigation as NavigationIcon } from 'lucide-react'
 
@@ -35,16 +36,7 @@ export default function Dashboard() {
           {/* Right Column - Narrower */}
           <div className="space-y-6">
             <Checklist />
-            <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-              <div className="bg-[#C8B5E8] px-6 py-4">
-                <h2 className="text-xl font-bold text-gray-900">Map</h2>
-              </div>
-              <div className="p-6">
-                <div className="text-center text-gray-600">
-                  Map will be integrated here
-                </div>
-              </div>
-            </div>
+            <PatientLocationMap />
           </div>
         </div>
       </div>
