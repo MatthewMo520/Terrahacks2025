@@ -21,7 +21,6 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
 lib64/
 parts/
 sdist/
@@ -81,3 +80,5 @@ venv.bak/
 .Trashes
 ehthumbs.db
 Thumbs.db
+navigation_app/node_modules/
+node_modules/

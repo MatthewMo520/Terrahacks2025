@@ -2,9 +2,9 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { PatientProvider } from './contexts/PatientContext'
 import PatientHome from './pages/PatientHome'
 import Navigation from './pages/Navigation'
-import CaregiverLogin from './pages/CaregiverLogin'
 import CaregiverDashboard from './pages/CaregiverDashboard'
 import SetupHome from './pages/SetupHome'
+import Dashboard from './pages/Dashboard'
 
 function App() {
   return (
@@ -14,6 +14,7 @@ function App() {
           {/* Patient Routes */}
           <Route path="/" element={<PatientHome />} />
           <Route path="/navigate" element={<Navigation />} />
+          <Route path="/dashboard" element={<Dashboard />} />
           
           {/* Caregiver Routes */}
           <Route path="/caregiver" element={<CaregiverDashboard />} />
