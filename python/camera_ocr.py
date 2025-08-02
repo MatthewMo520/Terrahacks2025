@@ -253,11 +253,14 @@ class LiveCameraOCR:
         elif class_name_lower in ['bowl', 'plate', 'dining table', 'table']:
             return 'food'  # Food containers and surfaces
         
-        # DEFAULT CLASSIFICATION FOR UNIDENTIFIED OBJECTS - PRIORITIZE FOOD
-        # If it's not clearly pills or water, assume it could be food (especially for muffins)
+        # DEFAULT CLASSIFICATION FOR UNIDENTIFIED OBJECTS - SMART DETECTION
+        # If it's not clearly pills or water, check size and shape patterns
         if not any(keyword in class_name_lower for keyword in ['bottle', 'can', 'cup', 'glass', 'drink', 'beverage']):
-            # Check if it has food-like characteristics (medium size, not elongated)
-            if 1000 < area < 20000 and aspect_ratio < 2.0:
+            # Small to medium compact objects could be pill bottles
+            if 2000 < area < 18000 and 0.6 < aspect_ratio < 1.4:
+                return 'pills'  # Compact square-ish objects = pill bottles
+            # Medium-sized objects that aren't too compact could be food
+            elif 1000 < area < 20000 and aspect_ratio < 2.0:
                 return 'food'  # Default medium-sized objects to food (catches muffins)
         
         # STEP 2: Handle generic "bottle" - already handled above
@@ -355,8 +358,8 @@ class LiveCameraOCR:
             # Very elongated = cans or water bottles
             elif aspect_ratio > 2.0:
                 return 'water'
-            # Compact objects = pills (but not if very vertical)
-            elif area < 20000 and aspect_ratio < 1.8:
+            # Compact objects = pills (including square/straight orientation)
+            elif area < 20000 and (aspect_ratio < 1.8 or (0.7 < aspect_ratio < 1.3)):
                 return 'pills'
             
             return 'unknown'
@@ -423,9 +426,9 @@ class LiveCameraOCR:
                     elif any(word in ocr_text_lower for word in ['water', 'juice', 'soda', 'drink', 'cola', 'ml', 'oz', 'liter']):
                         return 'water'
                 
-                # SMART shape-based classification - distinguish pills from water
-                # Compact objects are pill bottles, tall objects are water bottles
-                if aspect_ratio < 1.6:  # Compact objects = pill bottles
+                # ENHANCED shape-based classification - include square pill bottles
+                # Compact OR square objects are pill bottles, tall objects are water bottles
+                if aspect_ratio < 1.6 or (0.8 < aspect_ratio < 1.2):  # Compact OR square = pill bottles
                     return 'pills'
                 elif aspect_ratio > 1.8:  # Tall objects = water bottles
                     return 'water'
@@ -443,8 +446,8 @@ class LiveCameraOCR:
             elif area > 10000:
                 return 'food'  # Large packages = food
             
-            # SMART pill detection - avoid tall water bottles
-            elif 1000 < area < 30000 and aspect_ratio < 1.8:  # Compact objects only
+            # ENHANCED pill detection - include square objects (straight orientation)
+            elif 1000 < area < 30000 and (aspect_ratio < 1.8 or (0.8 < aspect_ratio < 1.2)):  # Compact OR square objects
                 # Check OCR first for medicine keywords
                 if ocr_text_lower:
                     medicine_keywords = ['mg', 'pill', 'tablet', 'vitamin', 'medicine', 'rx', 'capsule', 'count', 'ct']
@@ -461,6 +464,9 @@ class LiveCameraOCR:
                 # Tall objects are likely water bottles
                 if aspect_ratio > 1.8 and area > 5000:
                     return 'water'  # Tall objects = water bottles
+                # Square-ish/compact objects are likely pill bottles (including straight orientation)
+                elif area > 2000 and 0.7 < aspect_ratio < 1.3:
+                    return 'pills'  # Square objects = pill bottles held straight
                 # Small compact objects could be pills
                 elif area < 15000 and aspect_ratio < 1.6:
                     return 'pills'  # Small compact objects = pills
