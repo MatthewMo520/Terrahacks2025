@@ -6,7 +6,17 @@
       "WebFetch(domain:media.discordapp.net)",
       "Bash(python:*)",
       "Bash(git restore:*)",
-      "Bash(source:*)"
+      "Bash(source:*)",
+      "Bash(mkdir:*)",
+      "WebFetch(domain:www.figma.com)",
+      "Bash(rm:*)",
+      "Bash(npm create:*)",
+      "Bash(npm install)",
+      "Bash(npm install:*)",
+      "Bash(npx tailwindcss init:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(true)",
+      "Bash(timeout 10 npm run dev)"
     ],
     "deny": []
   }
