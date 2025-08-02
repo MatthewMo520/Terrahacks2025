@@ -38,10 +38,16 @@ class LiveCameraOCR:
         self.cap = cv2.VideoCapture(0)
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+        self.cap.set(cv2.CAP_PROP_FPS, 30)  # Set FPS for smoother performance
+        self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)  # Reduce buffer size to minimize lag
         
         self.frame_count = 0
-        self.process_every_n_frames = 15  # Process less frequently for better performance
+        self.process_every_n_frames = 8  # Reduced from 15 to 8 for better responsiveness
         self.last_detections = []
+        
+        # OCR cache to avoid redundant processing
+        self.ocr_cache = {}
+        self.cache_frame_count = 0
         
         # Pose detection variables
         self.pTime = time.time()
@@ -82,8 +88,14 @@ class LiveCameraOCR:
         area = width * height
         aspect_ratio = max(width/height if height > 0 else 1, height/width if width > 0 else 1)
         
-        # SINGLE OCR CALL - cache result for multiple uses
-        ocr_text = self.extract_text_from_region(frame, (x1, y1, x2, y2))
+        # Use cached OCR result if available
+        cache_key = f"{self.cache_frame_count}_{x1}_{y1}_{x2}_{y2}"
+        if cache_key in self.ocr_cache:
+            ocr_text = self.ocr_cache[cache_key]
+        else:
+            ocr_text = self.extract_text_from_region(frame, (x1, y1, x2, y2))
+            self.ocr_cache[cache_key] = ocr_text
+        
         ocr_text_lower = ocr_text.lower() if ocr_text.strip() else ""
         
         # BOTTLE CLASSIFICATION - CHECK FOR PILL BOTTLES FIRST
@@ -228,7 +240,7 @@ class LiveCameraOCR:
                     return 'food'
                 
                 # Check for medicine keywords
-                if any(word in text_lower for word in ['pill', 'tablet', 'vitamin', 'medicine', 'capsule', 'mg']):
+                if any(word in ocr_text_lower for word in ['pill', 'tablet', 'vitamin', 'medicine', 'capsule', 'mg']):
                     return 'pills'
             
             # Fallback shape-based detection - JUICE BOXES ARE NEVER PILLS
@@ -317,7 +329,7 @@ class LiveCameraOCR:
                     return 'pills'
                 
                 # Beverage keywords
-                if any(word in text_lower for word in ['water', 'juice', 'soda', 'cola', 'drink', 'beverage', 'ml', 'fl oz', 'liter']):
+                if any(word in ocr_text_lower for word in ['water', 'juice', 'soda', 'cola', 'drink', 'beverage', 'ml', 'fl oz', 'liter']):
                     return 'water'
                 
                 # Food keywords - COMPREHENSIVE DETECTION INCLUDING MUFFINS AND WRAPPED ITEMS
@@ -388,6 +400,11 @@ class LiveCameraOCR:
                     return 'food'   # Square = food package
     
     def detect_objects(self, frame: np.ndarray) -> List[Dict]:
+        # Clear OCR cache when processing new frame
+        self.cache_frame_count += 1
+        if self.cache_frame_count % 50 == 0:  # Clear cache every 50 frames for better memory usage
+            self.ocr_cache.clear()
+        
         results = self.model(frame, verbose=False)
         detections = []
         
@@ -400,7 +417,7 @@ class LiveCameraOCR:
                     class_id = int(box.cls[0].cpu().numpy())
                     class_name = self.model.names[class_id]
                     
-                    if confidence > 0.4:  # Reduced threshold to catch partially occluded objects near mouth
+                    if confidence > 0.5:  # Optimized threshold for better performance
                         bbox = (int(x1), int(y1), int(x2), int(y2))
                         object_type = self.classify_object(class_name, bbox, frame)
                         detections.append({
@@ -420,35 +437,21 @@ class LiveCameraOCR:
         
         roi = frame[y1:y2, x1:x2]
         
-        if roi.size == 0 or roi.shape[0] < 20 or roi.shape[1] < 20:
-            return ""
+        if roi.size == 0 or roi.shape[0] < 15 or roi.shape[1] < 15:
+            return ""  # Skip very small regions faster
         
-        # Optimized OCR with fewer attempts for speed
+        # Optimized OCR with single configuration for speed
         try:
             roi_pil = Image.fromarray(cv2.cvtColor(roi, cv2.COLOR_BGR2RGB))
             
-            # Try just 2 fast OCR configurations instead of 4
-            configs = [
-                '--psm 8 -c tessedit_char_whitelist=0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz ',  # Single word
-                '--psm 6 -c tessedit_char_whitelist=0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz '   # Uniform text block
-            ]
+            # Single fast OCR configuration
+            config = '--psm 6 -c tessedit_char_whitelist=0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz '
             
-            best_text = ""
-            
-            for config in configs:
-                try:
-                    text = pytesseract.image_to_string(roi_pil, config=config).strip()
-                    if len(text) > len(best_text):
-                        best_text = text
-                        
-                        # If we find medicine keywords, return immediately for speed
-                        text_lower = text.lower()
-                        if any(word in text_lower for word in ['mg', 'pill', 'tablet', 'vitamin', 'medicine', 'rx', 'muffin', 'food']):
-                            return text
-                except:
-                    continue
-            
-            return best_text
+            try:
+                text = pytesseract.image_to_string(roi_pil, config=config).strip()
+                return text
+            except:
+                return ""
         except Exception:
             return ""
     
@@ -493,12 +496,13 @@ class LiveCameraOCR:
         
         return annotated_frame
     
-    def process_pose_detection(self, frame: np.ndarray) -> np.ndarray:
+def process_pose_detection(self, frame: np.ndarray) -> np.ndarray:
         """Process pose detection and update status"""
         # Process pose detection
         frame = self.pose_detector.findPose(frame, draw=False)
         lmList = self.pose_detector.findPosition(frame, draw=False)
         current_time = time.time()
+        
         
         # Track body presence for fall detection
         body_present = len(lmList) != 0
@@ -603,6 +607,7 @@ class LiveCameraOCR:
             object_type = detection['object_type']
             if object_type in ['pills', 'water', 'food']:
                 detected_categories.add(object_type)
+        
         
         # Handle STANDING position - output pill message with day and meal time
         if (self.pose_status == "standing" and 
@@ -722,6 +727,7 @@ class LiveCameraOCR:
             
             # Then process object detection
             annotated_frame = self.draw_detections(annotated_frame, self.last_detections, show_ocr=False)
+            
             annotated_frame = self.add_instructions(annotated_frame)
             
             cv2.imshow('Live Camera OCR - Objects Detection', annotated_frame)
