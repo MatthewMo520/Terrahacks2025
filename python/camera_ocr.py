@@ -453,6 +453,9 @@ class LiveCameraOCR:
         if roi.size == 0 or roi.shape[0] < 15 or roi.shape[1] < 15:
             return ""  # Skip very small regions faster
         
+        # Calculate area for performance check
+        area = roi.shape[0] * roi.shape[1]
+        
         # Skip OCR for very small regions to improve performance
         if area < 2000:
             return ""
