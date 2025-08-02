@@ -127,17 +127,17 @@ class LiveCameraOCR:
                 if any(word in ocr_text_lower for word in medicine_keywords):
                     return 'pills'  # It's a pill bottle
             
-            # Enhanced shape-based detection for pill bottles
-            # Pill bottles are typically wider and shorter than water bottles
-            if aspect_ratio < 1.8 and area > 3000:  # Wide, substantial bottles are likely pill bottles
+            # VERY AGGRESSIVE pill bottle detection
+            # Most bottles should be considered pill bottles unless clearly water
+            if aspect_ratio < 2.2 and area > 2000:  # Almost all substantial bottles are pill bottles
                 return 'pills'
             
-            # If elongated and large, likely water bottle
-            if aspect_ratio > 2.0 and area > 8000:
+            # Only very elongated and very large bottles are water
+            if aspect_ratio > 2.5 and area > 12000:
                 return 'water'
             
-            # Default small bottles to pills, large to water
-            return 'pills' if area < 12000 else 'water'
+            # Default ALL bottles to pills unless very large
+            return 'pills' if area < 20000 else 'water'
         
         # JUICE BOX PROTECTION - ALWAYS WATER
         if any(juice_word in class_name_lower for juice_word in ['juice', 'juicebox', 'juice box']):
@@ -213,9 +213,21 @@ class LiveCameraOCR:
         elif class_name_lower in ['can', 'water bottle', 'cup', 'mug', 'glass', 'carton', 'juice box', 'tetra pak']:
             return 'water'  # All drink containers including juice boxes
             
-        # PILLS CATEGORY - Only medicine
+        # PILLS CATEGORY - Aggressive pill detection
         elif any(keyword in class_name_lower for keyword in ['pill', 'medicine', 'capsule', 'tablet', 'vitamin', 'medication', 'pharmacy', 'prescription', 'drug']):
             return 'pills'  # Only medicine-related items
+        
+        # AGGRESSIVE PILL BOTTLE DETECTION - catch any small/medium cylindrical objects
+        elif any(keyword in class_name_lower for keyword in ['jar', 'container', 'cylinder']):
+            # Small to medium containers are likely pill bottles
+            if area < 25000:
+                return 'pills'
+        
+        # CATCH-ALL FOR SMALL COMPACT OBJECTS - likely pills
+        elif area < 15000 and aspect_ratio < 1.5:
+            # Very small compact objects default to pills unless clearly food/water
+            if not any(keyword in class_name_lower for keyword in ['food', 'snack', 'cake', 'muffin', 'water', 'juice', 'drink']):
+                return 'pills'
             
         # FOOD CATEGORY - COMPREHENSIVE FOOD DETECTION INCLUDING WRAPPED ITEMS AND DEFAULT OBJECTS
         food_keywords = [
@@ -321,22 +333,18 @@ class LiveCameraOCR:
                 if any(word in ocr_text_lower for word in ['cola', 'pepsi', 'coke', 'sprite', 'water', 'juice', 'soda', 'drink']):
                     return 'water'
             
-            # Enhanced fallback shape-based detection for pill containers
-            # Jars are often medicine containers - be more aggressive
+            # VERY AGGRESSIVE fallback for pill containers
+            # ALL jars are pill containers unless very large
             if 'jar' in class_name_lower:
-                return 'pills' if area < 20000 else 'food'
-            # Cylindrical objects - enhanced pill detection
+                return 'pills' if area < 30000 else 'food'
+            # ALL cylinders and containers default to pills
             elif 'cylinder' in class_name_lower or 'container' in class_name_lower:
-                # Wide cylinders are more likely pill bottles
-                if aspect_ratio < 1.5:
-                    return 'pills'
-                else:
-                    return 'pills' if area < 15000 else 'water'
-            # Very elongated = cans
-            elif aspect_ratio > 2.5:
+                return 'pills' if area < 25000 else 'water'
+            # Very elongated = cans (still water)
+            elif aspect_ratio > 2.8:
                 return 'water'
-            # Medium-sized compact objects = pills
-            elif area < 12000 and aspect_ratio < 2.0:
+            # ALL compact objects = pills
+            elif area < 20000 and aspect_ratio < 2.5:
                 return 'pills'
             
             return 'unknown'
@@ -385,8 +393,8 @@ class LiveCameraOCR:
             elif aspect_ratio > 1.2 and area > 3000:
                 return 'water'  # All rectangular objects = juice boxes
             
-            # Cylindrical objects that could be bottles viewed from top/bottom - ENHANCED PILL DETECTION
-            elif 3000 < area < 35000 and aspect_ratio < 2.0:  # Expanded range for pill bottles
+            # Cylindrical objects that could be bottles viewed from top/bottom - MAXIMUM PILL DETECTION
+            elif 1500 < area < 40000 and aspect_ratio < 2.5:  # Very expanded range for pill bottles
                 # Use cached OCR to check for medicine keywords first (more specific)
                 if ocr_text_lower:
                     medicine_keywords = [
@@ -403,11 +411,11 @@ class LiveCameraOCR:
                     elif any(word in ocr_text_lower for word in ['water', 'juice', 'soda', 'drink', 'cola', 'ml', 'oz', 'liter']):
                         return 'water'
                 
-                # Enhanced shape-based classification for pill bottles
-                # Wide, compact objects are more likely pill bottles
-                if aspect_ratio < 1.3:  # Very compact = pill bottle
+                # MAXIMUM AGGRESSIVE shape-based classification for pill bottles
+                # Most objects should be pill bottles
+                if aspect_ratio < 2.0:  # Most objects = pill bottle
                     return 'pills'
-                elif area < 18000:  # Smaller objects default to pills
+                elif area < 25000:  # Most smaller objects default to pills
                     # Use cached OCR for food keywords to avoid misclassifying muffins as pills
                     if ocr_text_lower:
                         food_check_keywords = ['muffin', 'cupcake', 'cake', 'food', 'bakery', 'baked', 'pastry', 'snack']
@@ -421,8 +429,8 @@ class LiveCameraOCR:
             elif area > 10000:
                 return 'food'  # Large packages = food
             
-            # Enhanced pill detection for medium-sized compact objects
-            elif 2000 < area < 18000 and aspect_ratio < 1.8:  # Expanded range
+            # MAXIMUM pill detection for compact objects
+            elif 1000 < area < 30000 and aspect_ratio < 2.2:  # Very expanded range
                 # Check OCR first for medicine keywords
                 if ocr_text_lower:
                     medicine_keywords = ['mg', 'pill', 'tablet', 'vitamin', 'medicine', 'rx', 'capsule', 'count', 'ct']
@@ -434,9 +442,13 @@ class LiveCameraOCR:
                 # Default compact objects to pills
                 return 'pills'  # Compact objects = likely pill bottles
             
-            # Everything else defaults to food (ESPECIALLY for muffins)
+            # Split defaults between pills and food based on size
             else:
-                return 'food'  # Default everything else to food to catch muffins
+                # Small to medium objects could be pills
+                if area < 15000 and aspect_ratio < 1.8:
+                    return 'pills'  # Small compact objects = pills
+                else:
+                    return 'food'  # Larger objects = food to catch muffins
     
     def detect_objects(self, frame: np.ndarray) -> List[Dict]:
         # Clear OCR cache when processing new frame
@@ -456,7 +468,7 @@ class LiveCameraOCR:
                     class_id = int(box.cls[0].cpu().numpy())
                     class_name = self.model.names[class_id]
                     
-                    if confidence > 0.3:  # Lower threshold to catch muffins and other food items
+                    if confidence > 0.25:  # Very low threshold to catch all objects including pills
                         bbox = (int(x1), int(y1), int(x2), int(y2))
                         object_type = self.classify_object(class_name, bbox, frame)
                         detections.append({
