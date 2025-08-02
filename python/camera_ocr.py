@@ -520,7 +520,7 @@ class LiveCameraOCR:
         
         return annotated_frame
     
-def process_pose_detection(self, frame: np.ndarray) -> np.ndarray:
+    def process_pose_detection(self, frame: np.ndarray) -> np.ndarray:
         """Process pose detection and update status"""
         # Process pose detection
         frame = self.pose_detector.findPose(frame, draw=False)
