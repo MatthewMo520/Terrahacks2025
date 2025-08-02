@@ -1,0 +1,11 @@
+{
+  "patient": {
+    "id": "patient",
+    "name": "Patient",
+    "home_address": "Queen's Park Crescent West, Toronto, Ontario",
+    "home_lat": 43.661,
+    "home_lng": -79.395,
+    "last_active": "2025-08-02T16:50:07.795390",
+    "last_active_display": "Just now"
+  }
+}

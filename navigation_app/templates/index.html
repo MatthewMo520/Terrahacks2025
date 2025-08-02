@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Navigate Home</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- Leaflet Routing Machine CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+    
+    <!-- Our CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/navigation.css') }}">
+    
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Leaflet Routing Machine -->
+    <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Main Navigation Screen -->
+        <div id="main-screen" class="screen active">
+            <h1 class="app-title">Find My Way Home</h1>
+            
+            <button id="take-me-home" class="big-button primary">
+                <span class="icon">🏠</span>
+                <span class="text">TAKE ME HOME</span>
+            </button>
+            
+            <button id="emergency-btn" class="big-button emergency">
+                <span class="icon">🚨</span>
+                <span class="text">EMERGENCY</span>
+            </button>
+        </div>
+
+        <!-- Navigation Screen -->
+        <div id="nav-screen" class="screen">
+            <div class="nav-header">
+                <h2>Going Home</h2>
+                <button id="stop-nav" class="stop-button">STOP</button>
+            </div>
+            
+            <div class="direction-display">
+                <div id="direction-arrow" class="arrow">⬆️</div>
+                <div id="direction-text" class="direction-text">Continue straight</div>
+                <div id="distance-text" class="distance-text">--</div>
+            </div>
+            
+            <div id="map-container"></div>
+            
+            <button id="nav-emergency" class="big-button emergency nav-emergency">
+                <span class="icon">🚨</span>
+                <span class="text">HELP</span>
+            </button>
+        </div>
+
+        <!-- Emergency Confirmation -->
+        <div id="emergency-confirm" class="modal">
+            <div class="modal-content">
+                <h2>Need Help?</h2>
+                <p>This will send your location to your caregiver</p>
+                <button id="confirm-emergency" class="big-button emergency">
+                    YES, GET HELP
+                </button>
+                <button id="cancel-emergency" class="big-button secondary">
+                    NO, I'M OK
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Audio for voice guidance -->
+    <audio id="voice-audio" preload="auto"></audio>
+    
+    <script src="{{ url_for('static', filename='js/navigation_osm.js') }}"></script>
+</body>
+</html>

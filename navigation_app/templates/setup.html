@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setup Home Address - Caregiver Portal</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- Leaflet Control Geocoder CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+    
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            padding: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #2c5aa0;
+            margin-bottom: 30px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #333;
+        }
+        
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        
+        .button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        
+        .button:hover {
+            background-color: #45a049;
+        }
+        
+        .info {
+            background-color: #e3f2fd;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        
+        .success {
+            background-color: #c8e6c9;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+            display: none;
+        }
+        
+        #map {
+            height: 300px;
+            margin-top: 20px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+        }
+    </style>
+    
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Leaflet Control Geocoder -->
+    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Setup Home Address</h1>
+        
+        <div class="info">
+            <p>As a caregiver, you can set the patient's home address here. This address will be used for the "Take Me Home" navigation feature.</p>
+        </div>
+        
+        <div class="form-group">
+            <label for="patient-id">Patient ID:</label>
+            <input type="text" id="patient-id" value="default_patient" placeholder="Enter patient ID">
+        </div>
+        
+        <div class="form-group">
+            <label for="home-address">Home Address:</label>
+            <input type="text" id="home-address" placeholder="Enter home address">
+        </div>
+        
+        <div id="map"></div>
+        
+        <button class="button" onclick="saveHomeAddress()">Save Home Address</button>
+        
+        <div class="success" id="success-message">
+            ✅ Home address saved successfully!
+        </div>
+    </div>
+    
+    <script>
+        let map;
+        let marker;
+        let homeLocation = null;
+        let geocoder;
+        
+        function initMap() {
+            // Default to Toronto
+            const defaultLocation = [43.6532, -79.3832];
+            
+            // Initialize Leaflet map
+            map = L.map('map').setView(defaultLocation, 15);
+            
+            // Add OpenStreetMap tiles
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 19
+            }).addTo(map);
+            
+            // Add marker
+            marker = L.marker(defaultLocation, { draggable: true }).addTo(map);
+            
+            // Initialize geocoder
+            geocoder = L.Control.Geocoder.nominatim();
+            
+            // Add search control
+            const searchControl = L.Control.geocoder({
+                geocoder: geocoder,
+                defaultMarkGeocode: false
+            }).on('markgeocode', function(e) {
+                const latlng = e.geocode.center;
+                const address = e.geocode.name;
+                
+                // Update marker position
+                marker.setLatLng(latlng);
+                map.setView(latlng, 16);
+                
+                // Update form
+                document.getElementById('home-address').value = address;
+                
+                homeLocation = {
+                    lat: latlng.lat,
+                    lng: latlng.lng,
+                    address: address
+                };
+            }).addTo(map);
+            
+            // Handle address input changes
+            const addressInput = document.getElementById('home-address');
+            let searchTimeout;
+            
+            addressInput.addEventListener('input', function() {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    const query = addressInput.value;
+                    if (query.length > 3) {
+                        geocoder.geocode(query, function(results) {
+                            if (results && results.length > 0) {
+                                const result = results[0];
+                                marker.setLatLng(result.center);
+                                map.setView(result.center, 16);
+                                
+                                homeLocation = {
+                                    lat: result.center.lat,
+                                    lng: result.center.lng,
+                                    address: result.name
+                                };
+                            }
+                        });
+                    }
+                }, 500);
+            });
+            
+            // Update location when marker is dragged
+            marker.on('dragend', function(event) {
+                const position = event.target.getLatLng();
+                homeLocation = {
+                    lat: position.lat,
+                    lng: position.lng,
+                    address: document.getElementById('home-address').value
+                };
+                
+                // Reverse geocode to get address
+                geocoder.reverse(position, map.options.crs.scale(map.getZoom()), function(results) {
+                    if (results && results.length > 0) {
+                        const address = results[0].name;
+                        document.getElementById('home-address').value = address;
+                        homeLocation.address = address;
+                    }
+                });
+            });
+        }
+        
+        async function saveHomeAddress() {
+            const patientId = document.getElementById('patient-id').value;
+            
+            if (!patientId) {
+                alert('Please enter a patient ID');
+                return;
+            }
+            
+            if (!homeLocation) {
+                alert('Please select a home address');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/patient/${patientId}/home`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        home_address: homeLocation.address,
+                        home_lat: homeLocation.lat,
+                        home_lng: homeLocation.lng
+                    })
+                });
+                
+                if (response.ok) {
+                    document.getElementById('success-message').style.display = 'block';
+                    setTimeout(() => {
+                        document.getElementById('success-message').style.display = 'none';
+                    }, 5000);
+                } else {
+                    alert('Error saving address. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error saving address. Please try again.');
+            }
+        }
+        
+        // Initialize map when page loads
+        window.onload = initMap;
+    </script>
+</body>
+</html>
