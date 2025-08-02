@@ -45,19 +45,10 @@
   border-radius: 50%;
   border: 3px solid #3b82f6;
   background: rgba(59, 130, 246, 0.1);
-  animation: pulse 2s infinite;
+
 }
 
-@keyframes pulse {
-  0% {
-    transform: translate(-50%, -50%) scale(1);
-    opacity: 1;
-  }
-  100% {
-    transform: translate(-50%, -50%) scale(2);
-    opacity: 0;
-  }
-}
+
 
 /* Better map styling */
 .leaflet-container {
