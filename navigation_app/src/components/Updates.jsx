@@ -8,14 +8,14 @@ export default function Updates() {
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm overflow-hidden h-[600px] flex flex-col">
+    <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
       {/* Purple header */}
-      <div className="bg-[#C8B5E8] px-8 py-4 flex-shrink-0">
+      <div className="bg-[#C8B5E8] px-6 py-4">
         <h2 className="text-xl font-bold text-gray-900">Updates</h2>
       </div>
 
-      {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-3">
+      {/* Content */}
+      <div className="p-6 space-y-3">
         {activities.map((activity, index) => (
           <div
             key={index}

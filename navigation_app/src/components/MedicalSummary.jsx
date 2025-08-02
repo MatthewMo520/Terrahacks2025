@@ -9,7 +9,7 @@ export default function MedicalSummary() {
   return (
     <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
       {/* Purple header */}
-      <div className="bg-[#C8B5E8] px-6 py-4 flex-shrink-0">
+      <div className="bg-[#C8B5E8] px-6 py-4">
         <h2 className="text-xl font-bold text-gray-900">Medical Summary</h2>
       </div>
 
