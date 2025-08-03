@@ -92,6 +92,7 @@ export default function Updates() {
       </div>
 
       {/* Content */}
+      <div className="h-80 overflow-y-auto">
       <div className="p-6 space-y-3">
         {activities.length === 0 ? (
           <div className="text-center text-gray-600 py-8">
@@ -134,6 +135,7 @@ export default function Updates() {
             )
           })
         )}
+      </div>
       </div>
     </div>
   )
