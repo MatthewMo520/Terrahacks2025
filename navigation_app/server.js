@@ -212,6 +212,84 @@ app.get('/api/health', (req, res) => {
     });
 });
 
+// Get checklist data based on MongoDB events
+app.get('/api/checklist-data', async (req, res) => {
+    try {
+        if (!logs) {
+            return res.status(503).json({ error: "MongoDB not connected" });
+        }
+        
+        const today = new Date();
+        const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000);
+        
+        // Get all events from today
+        const events = await logs.find({
+            time: { $gte: startOfDay, $lt: endOfDay }
+        }).toArray();
+        
+        // Define time ranges and their corresponding checklist items
+        const timeRanges = {
+            morning: { start: 6, end: 12, label: 'Morning' },
+            afternoon: { start: 12, end: 18, label: 'Afternoon' },
+            evening: { start: 18, end: 22, label: 'Evening' },
+            night: { start: 22, end: 6, label: 'Night' }
+        };
+        
+        // Define event mappings to checklist items
+        const eventMappings = {
+            'ate food': 'food',
+            'consumed water': 'water',
+            'took pills': 'medication',
+            'consumed pill': 'medication',
+            'pill reminder': 'medication',
+            'took medication': 'medication'
+        };
+        
+        // Initialize checklist data
+        const checklistData = {
+            morning: { food: false, water: false, medication: false },
+            afternoon: { food: false, water: false, medication: false },
+            evening: { food: false, water: false, medication: false }
+        };
+        
+        // Process each event
+        events.forEach(event => {
+            const eventTime = new Date(event.time);
+            const hour = eventTime.getHours();
+            const eventName = event.event.toLowerCase();
+            
+            // Determine time range
+            let timeRange = null;
+            if (hour >= 6 && hour < 12) timeRange = 'morning';
+            else if (hour >= 12 && hour < 18) timeRange = 'afternoon';
+            else if (hour >= 18 && hour < 22) timeRange = 'evening';
+            else timeRange = 'night';
+            
+            // Check if event matches any checklist item
+            for (const [eventPattern, checklistItem] of Object.entries(eventMappings)) {
+                if (eventName.includes(eventPattern)) {
+                    if (checklistData[timeRange] && checklistData[timeRange][checklistItem] !== undefined) {
+                        checklistData[timeRange][checklistItem] = true;
+                    }
+                    break;
+                }
+            }
+        });
+        
+        console.log(`✅ Generated checklist data from ${events.length} events`);
+        res.json({
+            checklist: checklistData,
+            totalEvents: events.length,
+            date: today.toISOString().split('T')[0]
+        });
+        
+    } catch (error) {
+        console.error('❌ Error generating checklist data:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Get medical summary by calling check.py
 app.get('/api/medical-summary', async (req, res) => {
     try {

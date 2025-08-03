@@ -82,4 +82,17 @@ export const fetchMedicalSummary = async () => {
     console.error('Error fetching medical summary:', error)
     throw error
   }
+}
+
+export const fetchChecklistData = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/checklist-data`)
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    return await response.json()
+  } catch (error) {
+    console.error('Error fetching checklist data:', error)
+    throw error
+  }
 } 
