@@ -77,11 +77,44 @@ class SMSService:
         message = f"💧 HYDRATION: Water intake logged at {timestamp}"
         return self.send_sms(message)
     
-    def send_fall_alert_sms(self, patient_id: str, fall_type: str = "unknown") -> bool:
-        """Send fall detection alert SMS"""
+    def send_fall_alert_sms(self, patient_id: str, fall_type: str = "unknown", location: str = "unknown location") -> bool:
+        """Send fall detection alert SMS with location"""
         timestamp = datetime.now().strftime("%I:%M %p")
-        message = f"🚨 FALL ALERT: Patient {patient_id} may have fallen at {timestamp}. Fall type: {fall_type}. Please check immediately!"
+        message = f"🚨 FALL ALERT: Patient {patient_id} may have fallen at {timestamp} at {location}. Fall type: {fall_type}. Please check immediately!"
         return self.send_sms(message)
+    
+    def trigger_emergency_call(self, patient_id: str, location: str = "unknown location") -> bool:
+        """Trigger emergency voice call for fall detection"""
+        try:
+            import requests
+            
+            # Call the emergency notification system
+            api_url = "http://localhost:5000/send_notification"
+            payload = {
+                "teammate": "Fall Detection System",
+                "notification_type": "all",  # SMS + Voice call
+                "person_name": patient_id,
+                "location": location
+            }
+            
+            response = requests.post(api_url, json=payload, timeout=10)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if result.get("success"):
+                    print(f"✅ Emergency call and SMS triggered successfully for {patient_id} at {location}")
+                    return True
+                else:
+                    print(f"❌ Emergency call failed: {result.get('error')}")
+                    return False
+            else:
+                print(f"❌ Emergency call HTTP error: {response.status_code}")
+                return False
+                
+        except Exception as e:
+            print(f"❌ Emergency call system error: {e}")
+            # Fall back to SMS only
+            return self.send_fall_alert_sms(patient_id, "fall detected", location)
     
     def test_sms(self) -> bool:
         """Send a test SMS to verify configuration"""

@@ -17,9 +17,9 @@
 
 /* Ensure full height for mobile */
 #root {
-  height: 100vh;
-  height: 100dvh;
-  overflow: hidden;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-y: auto;
 }
 
 /* Hide Leaflet routing instructions */
@@ -89,9 +89,15 @@
   font-family: inherit;
 }
 
-/* Hide zoom controls for cleaner look */
+/* Style zoom controls for better visibility */
 .leaflet-control-zoom {
-  display: none !important;
+  display: block !important;
+}
+
+.leaflet-control-zoom a {
+  background-color: white !important;
+  border: 1px solid #ccc !important;
+  color: #333 !important;
 }
 
 /* Style the attribution to be less prominent */

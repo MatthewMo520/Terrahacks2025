@@ -117,7 +117,31 @@ def main():
                     print("standing")
             else:
                 if time.time() - pTime > 5:
-                    print("fallen")
+                    print("FALL DETECTED!")
+                    # Trigger emergency notification with location
+                    try:
+                        # Import SMS service to trigger emergency call
+                        import sys
+                        import os
+                        sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+                        from services.sms_service import SMSService
+                        
+                        sms_service = SMSService()
+                        
+                        # Get location (placeholder - in real implementation, get GPS location)
+                        location = "Emergency location detected by fall detection camera"  # Replace with actual GPS
+                        
+                        # Trigger emergency call and SMS
+                        success = sms_service.trigger_emergency_call("Patient", location)
+                        
+                        if success:
+                            print("✅ Emergency notification sent successfully!")
+                        else:
+                            print("⚠️ Emergency notification may have failed")
+                            
+                    except Exception as e:
+                        print(f"❌ Error triggering emergency notification: {e}")
+                    
                     pTime = time.time()
                 pTime = time.time()
                 
