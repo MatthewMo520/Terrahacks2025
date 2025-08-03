@@ -23,9 +23,9 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6 overflow-y-scroll">
+    <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 min-h-0">
           {/* Left Column - Wider */}
           <div className="lg:col-span-2 space-y-6">
             <WelcomeBanner userName={userName} brandName={brandName} />
@@ -34,9 +34,11 @@ export default function Dashboard() {
           </div>
 
           {/* Right Column - Narrower */}
-          <div className="space-y-6">
+          <div className="space-y-6 flex flex-col min-h-0">
             <Checklist />
-            <PatientLocationMap />
+            <div className="flex-shrink-0">
+              <PatientLocationMap />
+            </div>
           </div>
         </div>
       </div>

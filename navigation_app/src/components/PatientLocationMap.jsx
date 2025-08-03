@@ -17,15 +17,19 @@ const homeIcon = new L.Icon({
   iconAnchor: [10, 33],
 })
 
-// Component to auto-center map on patient location
-function AutoCenter({ center }) {
+// Component to manage map centering
+function MapController({ center, shouldAutoCenter, onCenterComplete }) {
   const map = useMap()
   
   useEffect(() => {
-    if (center) {
+    if (center && shouldAutoCenter) {
       map.setView(center, 15)
+      // Reset autoCenter after centering
+      if (onCenterComplete) {
+        setTimeout(() => onCenterComplete(), 100)
+      }
     }
-  }, [center, map])
+  }, [center, shouldAutoCenter, map, onCenterComplete])
   
   return null
 }
@@ -35,6 +39,7 @@ export default function PatientLocationMap() {
   const [homeLocation] = useState({ lat: 40.7128, lng: -74.0060 }) // This should come from patient data
   const [locationError, setLocationError] = useState(false)
   const [isLocationActive, setIsLocationActive] = useState(false)
+  const [autoCenter, setAutoCenter] = useState(true)
 
   useEffect(() => {
     // Function to update patient location
@@ -77,6 +82,14 @@ export default function PatientLocationMap() {
     return () => clearInterval(locationInterval)
   }, [])
 
+  const handleCenterOnPatient = () => {
+    setAutoCenter(true)
+  }
+
+  const handleCenterComplete = () => {
+    setAutoCenter(false)
+  }
+
   if (!patientLocation) {
     return (
       <div className="bg-white rounded-2xl shadow-sm overflow-hidden h-64">
@@ -94,8 +107,8 @@ export default function PatientLocationMap() {
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-      <div className="bg-[#C8B5E8] px-4 py-3 flex items-center justify-between">
+    <div className="bg-white rounded-2xl shadow-sm overflow-hidden flex flex-col">
+      <div className="bg-[#C8B5E8] px-4 py-3 flex items-center justify-between flex-shrink-0">
         <h2 className="text-lg font-bold text-gray-900">Patient Location</h2>
         <div className="flex items-center gap-2">
           {locationError ? (
@@ -109,24 +122,28 @@ export default function PatientLocationMap() {
         </div>
       </div>
       
-      <div className="h-48 relative">
+      <div className="h-52 relative flex-shrink-0">
         <MapContainer
           center={patientLocation}
           zoom={15}
           className="h-full w-full"
-          zoomControl={false}
-          scrollWheelZoom={false}
-          dragging={false}
-          touchZoom={false}
-          doubleClickZoom={false}
+          zoomControl={true}
+          scrollWheelZoom={true}
+          dragging={true}
+          touchZoom={true}
+          doubleClickZoom={true}
         >
           <TileLayer
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             attribution='&copy; OpenStreetMap'
           />
           
-          {/* Auto-center on patient location */}
-          <AutoCenter center={patientLocation} />
+          {/* Map controller for centering */}
+          <MapController 
+            center={patientLocation} 
+            shouldAutoCenter={autoCenter} 
+            onCenterComplete={handleCenterComplete}
+          />
           
           {/* Patient Location Marker */}
           <Marker position={patientLocation} icon={createPatientLocationIcon()} />
@@ -134,6 +151,17 @@ export default function PatientLocationMap() {
           {/* Home Marker */}
           <Marker position={homeLocation} icon={homeIcon} />
         </MapContainer>
+
+        {/* Center on Patient button */}
+        <div className="absolute top-2 right-2">
+          <button
+            onClick={handleCenterOnPatient}
+            className="bg-white bg-opacity-90 hover:bg-opacity-100 rounded p-2 shadow-md transition-all"
+            title="Center on Patient"
+          >
+            <MapPin className="w-4 h-4 text-blue-500" />
+          </button>
+        </div>
 
         {/* Status overlay */}
         <div className="absolute bottom-2 left-2 bg-white bg-opacity-90 rounded px-2 py-1 text-xs">
@@ -152,7 +180,7 @@ export default function PatientLocationMap() {
       </div>
 
       {/* Location info */}
-      <div className="px-4 py-3 bg-gray-50 text-xs text-gray-600">
+      <div className="px-4 py-3 bg-gray-50 text-xs text-gray-600 flex-shrink-0 border-t border-gray-200">
         {locationError ? (
           <span className="text-red-600">Location services unavailable</span>
         ) : (
