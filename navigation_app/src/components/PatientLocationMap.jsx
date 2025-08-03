@@ -156,10 +156,11 @@ export default function PatientLocationMap() {
         <div className="absolute top-2 right-2">
           <button
             onClick={handleCenterOnPatient}
-            className="bg-white bg-opacity-90 hover:bg-opacity-100 rounded p-2 shadow-md transition-all"
-            title="Center on Patient"
+            className="bg-blue-500 hover:bg-blue-600 text-white rounded-lg px-3 py-2 shadow-lg transition-all flex items-center gap-2 text-sm font-medium"
+            title="Return to Patient Location"
           >
-            <MapPin className="w-4 h-4 text-blue-500" />
+            <MapPin className="w-4 h-4" />
+            <span>Find Patient</span>
           </button>
         </div>
 
