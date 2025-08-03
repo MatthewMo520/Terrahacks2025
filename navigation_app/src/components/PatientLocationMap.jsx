@@ -17,30 +17,12 @@ const homeIcon = new L.Icon({
   iconAnchor: [10, 33],
 })
 
-// Component to manage map centering
-function MapController({ center, shouldAutoCenter, onCenterComplete }) {
-  const map = useMap()
-  
-  useEffect(() => {
-    if (center && shouldAutoCenter) {
-      map.setView(center, 15)
-      // Reset autoCenter after centering
-      if (onCenterComplete) {
-        setTimeout(() => onCenterComplete(), 100)
-      }
-    }
-  }, [center, shouldAutoCenter, map, onCenterComplete])
-  
-  return null
-}
 
 export default function PatientLocationMap() {
   const [patientLocation, setPatientLocation] = useState(null)
   const [homeLocation] = useState({ lat: 40.7128, lng: -74.0060 }) // This should come from patient data
   const [locationError, setLocationError] = useState(false)
   const [isLocationActive, setIsLocationActive] = useState(false)
-  const [autoCenter, setAutoCenter] = useState(true)
-
   useEffect(() => {
     // Function to update patient location
     const updateLocation = () => {
@@ -82,32 +64,25 @@ export default function PatientLocationMap() {
     return () => clearInterval(locationInterval)
   }, [])
 
-  const handleCenterOnPatient = () => {
-    setAutoCenter(true)
-  }
-
-  const handleCenterComplete = () => {
-    setAutoCenter(false)
-  }
-
   if (!patientLocation) {
     return (
       <div className="bg-white rounded-2xl shadow-sm overflow-hidden h-64">
         <div className="bg-[#C8B5E8] px-4 py-3">
           <h2 className="text-lg font-bold text-gray-900">Patient Location</h2>
         </div>
-        <div className="p-6 h-full flex items-center justify-center">
+        <div className="p-6 h-full flex items-center justify-center relative">
           <div className="text-center">
             <MapPin className="w-8 h-8 text-gray-400 mx-auto mb-2" />
             <p className="text-sm text-gray-600">Getting patient location...</p>
           </div>
+          
         </div>
       </div>
     )
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm overflow-hidden flex flex-col">
+    <div className="bg-white rounded-2xl shadow-sm overflow-hidden flex flex-col relative">
       <div className="bg-[#C8B5E8] px-4 py-3 flex items-center justify-between flex-shrink-0">
         <h2 className="text-lg font-bold text-gray-900">Patient Location</h2>
         <div className="flex items-center gap-2">
@@ -138,31 +113,12 @@ export default function PatientLocationMap() {
             attribution='&copy; OpenStreetMap'
           />
           
-          {/* Map controller for centering */}
-          <MapController 
-            center={patientLocation} 
-            shouldAutoCenter={autoCenter} 
-            onCenterComplete={handleCenterComplete}
-          />
-          
           {/* Patient Location Marker */}
           <Marker position={patientLocation} icon={createPatientLocationIcon()} />
           
           {/* Home Marker */}
           <Marker position={homeLocation} icon={homeIcon} />
         </MapContainer>
-
-        {/* Center on Patient button */}
-        <div className="absolute top-2 right-2">
-          <button
-            onClick={handleCenterOnPatient}
-            className="bg-blue-500 hover:bg-blue-600 text-white rounded-lg px-3 py-2 shadow-lg transition-all flex items-center gap-2 text-sm font-medium"
-            title="Return to Patient Location"
-          >
-            <MapPin className="w-4 h-4" />
-            <span>Find Patient</span>
-          </button>
-        </div>
 
         {/* Status overlay */}
         <div className="absolute bottom-2 left-2 bg-white bg-opacity-90 rounded px-2 py-1 text-xs">
@@ -190,6 +146,7 @@ export default function PatientLocationMap() {
           </span>
         )}
       </div>
+
     </div>
   )
 }

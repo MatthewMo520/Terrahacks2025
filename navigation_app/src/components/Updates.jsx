@@ -110,7 +110,7 @@ export default function Updates() {
                 key={index}
                 className={`rounded-lg p-4 relative ${
                   eventType === "alert"
-                    ? "bg-red-100 border-l-4 border-red-500 animate-pulse"
+                    ? "bg-red-100 border-l-4 border-red-500"
                     : isUnread
                       ? "bg-blue-50 border-l-4 border-blue-500"
                       : "bg-gray-50"
