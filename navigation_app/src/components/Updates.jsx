@@ -28,18 +28,14 @@ export default function Updates() {
     return str.charAt(0).toUpperCase() + str.slice(1)
   }
 
-  const formatTimeAgo = (timestamp) => {
-    const now = new Date()
+  const formatTimestamp = (timestamp) => {
     const eventTime = new Date(timestamp)
-    const diffMs = now - eventTime
-    const diffMinutes = Math.floor(diffMs / (1000 * 60))
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-
-    if (diffMinutes < 1) return "Just now"
-    if (diffMinutes < 60) return `${diffMinutes}m ago`
-    if (diffHours < 24) return `${diffHours}h ago`
-    return `${diffDays}d ago`
+    return eventTime.toLocaleTimeString('en-US', { 
+      hour12: false,
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    })
   }
 
   const getEventType = (eventName) => {
@@ -102,7 +98,7 @@ export default function Updates() {
           activities.map((activity, index) => {
             const eventType = getEventType(activity.event || activity.action)
             const isUnread = index < 3 // Mark first 3 as unread
-            const timeDisplay = activity.time || formatTimeAgo(activity.timestamp)
+            const timeDisplay = formatTimestamp(activity.timestamp)
             const actionDisplay = activity.event || activity.action
 
             return (

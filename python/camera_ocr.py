@@ -610,7 +610,7 @@ class LiveCameraOCR:
                         self.last_pose_output_time = current_time
                         
                         # Send SMS alert for fall detection (async to avoid blocking)
-                        #threading.Thread(target=self.sms_service.send_fall_alert_sms, args=(self.patient_id, "body disappeared quickly"), daemon=True).start()
+                        threading.Thread(target=self.sms_service.send_fall_alert_sms, args=(self.patient_id, "body disappeared quickly"), daemon=True).start()
                         
                         # Store fall event in MongoDB (async to avoid blocking)
                         insert_logs("fallen")
@@ -644,7 +644,7 @@ class LiveCameraOCR:
                         self.last_pose_output_time = current_time
                         
                         # Send SMS alert for fall detection (async to avoid blocking)
-                        # threading.Thread(target=self.sms_service.send_fall_alert_sms, args=(self.patient_id, "pose detection"), daemon=True).start()
+                        threading.Thread(target=self.sms_service.send_fall_alert_sms, args=(self.patient_id, "pose detection"), daemon=True).start()
                         
                         # Store fall event in MongoDB (async to avoid blocking)
                         insert_logs("fallen")
@@ -679,10 +679,8 @@ class LiveCameraOCR:
             return "breakfast"
         elif 11 <= current_hour < 15:
             return "lunch"
-        elif 17 <= current_hour < 21:
-            return "dinner"
         else:
-            return "snack"  # Outside meal times
+            return "dinner"
     
     
     def check_consumption_event(self):
@@ -735,7 +733,7 @@ class LiveCameraOCR:
                         insert_logs("consumed pill")
                         
                         # Send SMS for pill consumption (async to avoid lag)
-                        # threading.Thread(target=self.sms_service.send_pill_consumed_sms, args=(self.patient_id,), daemon=True).start()
+                        threading.Thread(target=self.sms_service.send_pill_consumed_sms, args=(self.patient_id,), daemon=True).start()
                         
                         self.last_consumption_time = current_time
                         break
@@ -748,7 +746,7 @@ class LiveCameraOCR:
                         
                         # Send SMS for water consumption only every 30 seconds (async to avoid lag)
                         if current_time - self.last_water_sms_time > self.water_cooldown:
-                            #threading.Thread(target=self.sms_service.send_water_consumed_sms, args=(self.patient_id,), daemon=True).start()
+                            threading.Thread(target=self.sms_service.send_water_consumed_sms, args=(self.patient_id,), daemon=True).start()
                             self.last_water_sms_time = current_time
                         
                         self.last_consumption_time = current_time
@@ -764,7 +762,7 @@ class LiveCameraOCR:
                         if current_time - self.last_food_consumption_time > self.food_cooldown:
                             # Send SMS for food consumption only every 30 minutes (async to avoid lag)
                             if current_time - self.last_food_sms_time > self.food_cooldown:
-                                #threading.Thread(target=self.sms_service.send_food_consumed_sms, args=(self.patient_id,), daemon=True).start()
+                                threading.Thread(target=self.sms_service.send_food_consumed_sms, args=(self.patient_id,), daemon=True).start()
                                 self.last_food_sms_time = current_time
                             self.last_food_consumption_time = current_time
                         
