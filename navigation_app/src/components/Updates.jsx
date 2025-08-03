@@ -1,10 +1,87 @@
-import { UPDATES_DATA } from "../lib/dashboard-config"
+import { useState, useEffect } from 'react'
+import { fetchRecentEvents } from '../api/events'
 
 export default function Updates() {
-  const activities = UPDATES_DATA
+  const [activities, setActivities] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    loadRecentEvents()
+  }, [])
+
+  const loadRecentEvents = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const data = await fetchRecentEvents(10)
+      setActivities(data)
+    } catch (error) {
+      console.error('Error fetching events:', error)
+      setError('Failed to load updates from database')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const capitalizeFirstLetter = (str) => {
     return str.charAt(0).toUpperCase() + str.slice(1)
+  }
+
+  const formatTimeAgo = (timestamp) => {
+    const now = new Date()
+    const eventTime = new Date(timestamp)
+    const diffMs = now - eventTime
+    const diffMinutes = Math.floor(diffMs / (1000 * 60))
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+
+    if (diffMinutes < 1) return "Just now"
+    if (diffMinutes < 60) return `${diffMinutes}m ago`
+    if (diffHours < 24) return `${diffHours}h ago`
+    return `${diffDays}d ago`
+  }
+
+  const getEventType = (eventName) => {
+    const alertEvents = ['fallen', 'fall', 'emergency', '911']
+    const eventLower = eventName.toLowerCase()
+    
+    if (alertEvents.some(alert => eventLower.includes(alert))) {
+      return 'alert'
+    }
+    return 'activity'
+  }
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+        <div className="bg-[#C8B5E8] px-6 py-4">
+          <h2 className="text-xl font-bold text-gray-900">Updates</h2>
+        </div>
+        <div className="p-6">
+          <div className="text-center text-gray-600">Loading updates from database...</div>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+        <div className="bg-[#C8B5E8] px-6 py-4">
+          <h2 className="text-xl font-bold text-gray-900">Updates</h2>
+        </div>
+        <div className="p-6">
+          <div className="text-center text-red-600">{error}</div>
+          <button 
+            onClick={loadRecentEvents}
+            className="mt-4 mx-auto block bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -16,34 +93,47 @@ export default function Updates() {
 
       {/* Content */}
       <div className="p-6 space-y-3">
-        {activities.map((activity, index) => (
-          <div
-            key={index}
-            className={`rounded-lg p-4 relative ${
-              activity.type === "alert"
-                ? "bg-red-100 border-l-4 border-red-500 animate-pulse" // Red styling for alert
-                : activity.unread
-                  ? "bg-blue-50 border-l-4 border-blue-500"
-                  : "bg-gray-50"
-            }`}
-          >
-            {activity.unread && (
-              <div className="absolute top-1/2 right-4 transform -translate-y-1/2">
-                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-              </div>
-            )}
-            <div className="text-base text-gray-900">
-              <span className="font-medium">{activity.time}</span>
-              <span className="mx-2">-</span>
-              <span className={activity.type === "alert" ? "font-bold text-red-700" : ""}>
-                {capitalizeFirstLetter(activity.action)}
-              </span>
-              {activity.unread && (
-                <span className="ml-2 text-xs font-semibold text-blue-600 bg-blue-100 px-2 py-1 rounded-full">NEW</span>
-              )}
-            </div>
+        {activities.length === 0 ? (
+          <div className="text-center text-gray-600 py-8">
+            No events found in database
           </div>
-        ))}
+        ) : (
+          activities.map((activity, index) => {
+            const eventType = getEventType(activity.event || activity.action)
+            const isUnread = index < 3 // Mark first 3 as unread
+            const timeDisplay = activity.time || formatTimeAgo(activity.timestamp)
+            const actionDisplay = activity.event || activity.action
+
+            return (
+              <div
+                key={index}
+                className={`rounded-lg p-4 relative ${
+                  eventType === "alert"
+                    ? "bg-red-100 border-l-4 border-red-500 animate-pulse"
+                    : isUnread
+                      ? "bg-blue-50 border-l-4 border-blue-500"
+                      : "bg-gray-50"
+                }`}
+              >
+                {isUnread && (
+                  <div className="absolute top-1/2 right-4 transform -translate-y-1/2">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                  </div>
+                )}
+                <div className="text-base text-gray-900">
+                  <span className="font-medium">{timeDisplay}</span>
+                  <span className="mx-2">-</span>
+                  <span className={eventType === "alert" ? "font-bold text-red-700" : ""}>
+                    {capitalizeFirstLetter(actionDisplay)}
+                  </span>
+                  {isUnread && (
+                    <span className="ml-2 text-xs font-semibold text-blue-600 bg-blue-100 px-2 py-1 rounded-full">NEW</span>
+                  )}
+                </div>
+              </div>
+            )
+          })
+        )}
       </div>
     </div>
   )
