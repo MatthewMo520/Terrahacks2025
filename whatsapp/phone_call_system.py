@@ -28,10 +28,10 @@ app = Flask(__name__)
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'default-secret-key')
 
 # Configuration
-TARGET_PHONE_NUMBER = os.getenv('TARGET_PHONE_NUMBER', '647-236-5358')
+TARGET_PHONE_NUMBER = os.getenv('MY_PHONE_NUMBER', os.getenv('TARGET_PHONE_NUMBER', '647-236-5358'))
 TARGET_EMAIL = os.getenv('TARGET_EMAIL', 'emergency@example.com')
-# Emergency message with name placeholder
-EMERGENCY_MESSAGE_TEMPLATE = "{name} has fallen. 911 services have been contacted."
+# Emergency message with name and location placeholders
+EMERGENCY_MESSAGE_TEMPLATE = "{name} has fallen at {location}. 911 services have been contacted."
 
 # Email configuration (optional)
 EMAIL_ENABLED = os.getenv('EMAIL_ENABLED', 'false').lower() == 'true'
@@ -51,15 +51,15 @@ class EmergencyNotificationSystem:
         self.notification_history = []
         self.simulation_mode = True  # Set to False for real notifications
     
-    def send_emergency_notification(self, teammate_name="Unknown", notification_type="all", person_name="[NAME_PLACEHOLDER]"):
+    def send_emergency_notification(self, teammate_name="Unknown", notification_type="all", person_name="[NAME_PLACEHOLDER]", location="unknown location"):
         """
         Send emergency notification via multiple channels
         """
         try:
             logger.info(f"Sending emergency notification from {teammate_name} for {person_name}")
             
-            # Create the personalized emergency message
-            emergency_message = self.emergency_message_template.format(name=person_name)
+            # Create the personalized emergency message with location
+            emergency_message = self.emergency_message_template.format(name=person_name, location=location)
             
             # Create notification record
             notification_record = {
@@ -67,6 +67,7 @@ class EmergencyNotificationSystem:
                 "timestamp": datetime.now().isoformat(),
                 "teammate": teammate_name,
                 "person_name": person_name,
+                "location": location,
                 "type": notification_type,
                 "status": "initiated",
                 "message": emergency_message
@@ -88,10 +89,10 @@ class EmergencyNotificationSystem:
                 if self._send_whatsapp_message(notification_record):
                     success_channels.append("whatsapp")
             
-            # 4. Simulated Phone Call
+            # 4. Emergency Voice Call
             if notification_type in ["phone", "all"]:
-                if self._simulate_phone_call(notification_record):
-                    success_channels.append("phone_simulation")
+                if self._make_emergency_phone_call(notification_record):
+                    success_channels.append("emergency_voice_call")
             
             # 5. Log to file
             self._log_emergency(notification_record)
@@ -210,17 +211,69 @@ class EmergencyNotificationSystem:
             logger.error(f"WhatsApp notification failed: {e}")
             return False
     
+    def _make_emergency_phone_call(self, notification_record):
+        """Make a real emergency phone call using Twilio Voice API"""
+        try:
+            # Import Twilio here to avoid dependency issues if not installed
+            from twilio.rest import Client
+            
+            # Twilio configuration
+            account_sid = os.getenv('TWILIO_ACCOUNT_SID')
+            auth_token = os.getenv('TWILIO_AUTH_TOKEN')
+            twilio_phone = os.getenv('TWILIO_PHONE_NUMBER')
+            
+            if not all([account_sid, auth_token, twilio_phone]):
+                logger.warning("Twilio Voice not configured, falling back to simulation")
+                return self._simulate_phone_call(notification_record)
+            
+            client = Client(account_sid, auth_token)
+            
+            # Create voice message with location
+            voice_message = f"This is an automated emergency call. {notification_record['message']} Please respond immediately by pressing any key to confirm you received this alert."
+            
+            # Clean phone number for Twilio
+            phone_number = TARGET_PHONE_NUMBER.replace('-', '').replace(' ', '').replace('(', '').replace(')', '')
+            if not phone_number.startswith('+'):
+                phone_number = '+1' + phone_number  # Add US country code
+            
+            logger.info(f"Making emergency voice call to {phone_number}")
+            
+            # Create TwiML for the voice call
+            twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
+            <Response>
+                <Say voice="alice" rate="0.9">{voice_message}</Say>
+                <Gather timeout="10" numDigits="1">
+                    <Say voice="alice">Press any key to confirm you received this emergency alert.</Say>
+                </Gather>
+                <Say voice="alice">No response received. This call will now end. Please call back immediately.</Say>
+            </Response>"""
+            
+            # Make the voice call
+            call = client.calls.create(
+                twiml=twiml,
+                to=phone_number,
+                from_=twilio_phone,
+                timeout=30
+            )
+            
+            logger.info(f"Emergency voice call initiated successfully. Call SID: {call.sid}")
+            logger.info(f"Voice message: {voice_message}")
+            
+            return True
+            
+        except ImportError:
+            logger.warning("Twilio not installed, falling back to simulation")
+            return self._simulate_phone_call(notification_record)
+        except Exception as e:
+            logger.error(f"Emergency voice call failed: {e}")
+            # Fall back to simulation if real call fails
+            return self._simulate_phone_call(notification_record)
+    
     def _simulate_phone_call(self, notification_record):
-        """Simulate a phone call (for demo purposes)"""
+        """Simulate a phone call (fallback for demo purposes)"""
         try:
             logger.info(f"SIMULATION: Making emergency call to {TARGET_PHONE_NUMBER}")
             logger.info(f"SIMULATION: Playing message: {notification_record['message']}")
-            
-            # In a real implementation, this could:
-            # - Use a free SMS service like TextLocal, MSG91
-            # - Use WhatsApp Business API (now implemented above)
-            # - Use Telegram Bot API
-            # - Use Discord webhooks
             
             return True
         except Exception as e:
@@ -389,8 +442,9 @@ def send_notification():
         teammate_name = data.get('teammate', 'Unknown') if data else 'Unknown'
         notification_type = data.get('notification_type', 'all') if data else 'all'
         person_name = data.get('person_name', '[NAME_PLACEHOLDER]') if data else '[NAME_PLACEHOLDER]'
+        location = data.get('location', 'unknown location') if data else 'unknown location'
         
-        result = notification_system.send_emergency_notification(teammate_name, notification_type, person_name)
+        result = notification_system.send_emergency_notification(teammate_name, notification_type, person_name, location)
         return jsonify(result)
         
     except Exception as e:
