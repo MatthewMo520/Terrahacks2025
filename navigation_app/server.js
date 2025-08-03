@@ -212,6 +212,70 @@ app.get('/api/health', (req, res) => {
     });
 });
 
+// Get medical summary by calling check.py
+app.get('/api/medical-summary', async (req, res) => {
+    try {
+        const { spawn } = require('child_process');
+        const path = require('path');
+        
+        // Path to check.py in the parent directory
+        const checkPyPath = path.join(__dirname, '..', 'db', 'check.py');
+        
+        console.log(`🔍 Running check.py from: ${checkPyPath}`);
+        
+        // Spawn Python process
+        const pythonProcess = spawn('python3', [checkPyPath]);
+        
+        let output = '';
+        let errorOutput = '';
+        
+        // Collect stdout
+        pythonProcess.stdout.on('data', (data) => {
+            output += data.toString();
+        });
+        
+        // Collect stderr
+        pythonProcess.stderr.on('data', (data) => {
+            errorOutput += data.toString();
+        });
+        
+        // Handle process completion
+        pythonProcess.on('close', (code) => {
+            if (code !== 0) {
+                console.error(`❌ check.py exited with code ${code}`);
+                console.error(`Error output: ${errorOutput}`);
+                return res.status(500).json({ 
+                    error: 'Failed to generate medical summary',
+                    details: errorOutput
+                });
+            }
+            
+            console.log(`✅ check.py completed successfully`);
+            console.log(`📊 Generated summary: ${output.length} characters`);
+            
+            // Return the formatted output from check.py
+            res.json({
+                summary: output,
+                timestamp: new Date().toISOString(),
+                source: 'check.py'
+            });
+        });
+        
+        // Handle process errors
+        pythonProcess.on('error', (error) => {
+            console.error(`❌ Failed to start check.py: ${error.message}`);
+            res.status(500).json({ 
+                error: 'Failed to start medical summary generation',
+                details: error.message
+            });
+        });
+        
+    } catch (error) {
+        console.error('❌ Error in medical summary endpoint:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Start server
 async function startServer() {
     await connectToMongoDB();
