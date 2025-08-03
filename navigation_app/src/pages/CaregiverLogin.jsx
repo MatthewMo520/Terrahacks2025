@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { usePatient } from '../contexts/PatientContext'
+
 import { Shield, ArrowLeft, Lock } from 'lucide-react'
 
 export default function CaregiverLogin() {
   const navigate = useNavigate()
-  const { loginCaregiver } = usePatient()
+
   const [passcode, setPasscode] = useState('')
   const [error, setError] = useState('')
 

@@ -1,20 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { usePatient } from '../contexts/PatientContext'
 import { Home, AlertCircle } from 'lucide-react'
 import EmergencyModal from '../components/EmergencyModal'
 
 export default function PatientHome() {
   const navigate = useNavigate()
-  const { currentPatient, patients, selectPatient } = usePatient()
   const [showEmergency, setShowEmergency] = useState(false)
-
-  // Auto-select the single patient
-  useEffect(() => {
-    if (!currentPatient && patients.length > 0) {
-      selectPatient(patients[0].id)
-    }
-  }, [currentPatient, patients, selectPatient])
 
   const handleNavigateHome = () => {
     navigate('/navigate')
@@ -28,19 +19,7 @@ export default function PatientHome() {
     setShowEmergency(true)
   }
 
-  // Show loading if patient not yet loaded
-  if (!currentPatient) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 bg-purple-200 rounded-3xl flex items-center justify-center mx-auto mb-4 animate-pulse">
-            <Home className="w-8 h-8 text-purple-600" />
-          </div>
-          <h2 className="text-2xl font-semibold text-gray-800">Loading...</h2>
-        </div>
-      </div>
-    )
-  }
+
 
   return (
     <div className="min-h-screen bg-slate-50 p-6">

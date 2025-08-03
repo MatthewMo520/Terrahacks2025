@@ -1,23 +1,14 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { usePatient } from '../contexts/PatientContext'
 import { Users, MapPin, Settings, Clock, Heart, CheckCircle, XCircle } from 'lucide-react'
 import axios from 'axios'
 
 export default function CaregiverDashboard() {
   const navigate = useNavigate()
-  const { patients, loading, refreshPatients, loginCaregiver, isCaregiver } = usePatient()
   const [activities, setActivities] = useState([])
-
-  // Automatically log in as caregiver when accessing this page
-  useEffect(() => {
-    if (!isCaregiver) {
-      loginCaregiver()
-    }
-  }, [isCaregiver, loginCaregiver])
+  const [loading, setLoading] = useState(false)
 
   const handleRefresh = () => {
-    refreshPatients()
     loadActivities()
   }
 

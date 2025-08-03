@@ -1,10 +1,10 @@
 import { useNavigate } from 'react-router-dom'
-import { usePatient } from '../contexts/PatientContext'
+
 import { UserCircle, Settings } from 'lucide-react'
 
 export default function PatientSelect() {
   const navigate = useNavigate()
-  const { patients, selectPatient } = usePatient()
+
 
   const handlePatientSelect = (patient) => {
     selectPatient(patient.id)

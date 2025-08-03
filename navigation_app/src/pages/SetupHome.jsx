@@ -4,7 +4,7 @@ import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet-control-geocoder'
 import { ArrowLeft, MapPin, Save, Search } from 'lucide-react'
-import { usePatient } from '../contexts/PatientContext'
+
 import axios from 'axios'
 
 // Custom marker icon
@@ -71,7 +71,7 @@ function LocationMarker({ position, setPosition, onAddressUpdate }) {
 
 export default function SetupHome() {
   const navigate = useNavigate()
-  const { refreshPatients, loginCaregiver, isCaregiver } = usePatient()
+
   const [position, setPosition] = useState(null)
   const [address, setAddress] = useState('')
   const [loading, setLoading] = useState(false)
