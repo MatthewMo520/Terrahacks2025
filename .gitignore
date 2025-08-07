@@ -80,5 +80,5 @@ venv.bak/
 .Trashes
 ehthumbs.db
 Thumbs.db
-navigation_app/node_modules/
+app/node_modules/
 node_modules/

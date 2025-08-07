@@ -77,7 +77,7 @@ def load_patient_data():
 def save_patient_data():
     """Save patient data to file with improved error handling"""
     try:
-        # Use absolute path in navigation_app directory
+        # Use absolute path in app directory
         file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'patient_data.json')
         
         data_to_save = {}
